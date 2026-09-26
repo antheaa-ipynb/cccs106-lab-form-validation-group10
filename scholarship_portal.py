@@ -91,8 +91,14 @@ class ScholarshipValidator:
         Returns: Normalized student ID.
         Raises: IDFormatError if invalid.
         """
-        # TODO: Implement ID validation using cls.STUDENT_ID_REGEX
-        pass
+        clean = cls.sanitize_string(value)
+
+        if not cls.STUDENT_ID_REGEX.fullmatch(clean):
+            raise IDFormatError(
+                "Invalid Student ID. Expected format: YYYY-NNNN (e.g., 2024-0123)."
+            )
+
+        return clean
 
     @classmethod
     def validate_email(cls, value: Optional[str]) -> str:
@@ -101,8 +107,14 @@ class ScholarshipValidator:
         Returns: Lowercased, sanitized email.
         Raises: EmailDomainError if invalid.
         """
-        # TODO: Implement email validation using cls.CSPC_EMAIL_REGEX
-        pass
+        clean = cls.sanitize_string(value).lower()
+
+        if not cls.CSPC_EMAIL_REGEX.fullmatch(clean):
+            raise EmailDomainError(
+                "Institutional email required (must end with @cspc.edu.ph)."
+            )
+
+        return clean
 
     @classmethod
     def validate_phone(cls, value: Optional[str]) -> str:
@@ -111,8 +123,22 @@ class ScholarshipValidator:
         Returns: Normalized 11-digit phone string.
         Raises: ScholarshipValidationError if invalid.
         """
-        # TODO: Implement phone validation using cls.PH_PHONE_REGEX
-        pass
+        clean = cls.sanitize_string(value)
+
+        # Remove spaces and hyphens.
+        clean = re.sub(r"[\s-]", "", clean)
+
+        # Convert the +63 prefix to the local 0 prefix.
+        if clean.startswith("+63"):
+            clean = "0" + clean[3:]
+
+        # Check the mobile number format.
+        if not cls.PH_PHONE_REGEX.fullmatch(clean):
+            raise ScholarshipValidationError(
+                "Invalid mobile number. Expected: 09XXXXXXXXX or +639XXXXXXXXX."
+            )
+
+        return clean
 
     @classmethod
     def validate_gwa(cls, value: Optional[str]) -> float:
@@ -121,8 +147,21 @@ class ScholarshipValidator:
         Returns: Parsed float value.
         Raises: GWARangeError if out of bounds or non-numeric.
         """
-        # TODO: Implement defensive float parsing and range check
-        pass
+        clean = cls.sanitize_string(value)
+
+        try:
+            gwa = float(clean)
+        except (TypeError, ValueError):
+            raise GWARangeError(
+                "GWA must be a valid number between 1.00 and 5.00."
+            )
+
+        if not 1.00 <= gwa <= 5.00:
+            raise GWARangeError(
+                "GWA must be a valid number between 1.00 and 5.00."
+            )
+
+        return gwa
 
 
 # ============================================================================
@@ -239,42 +278,89 @@ def main(page: ft.Page):
             has_errors = True
 
         # 2. Validate Student ID
-        # TODO: Wrap validate_student_id in try...except and set id_field.error
-        clean_id = None
+        try:
+            clean_id = ScholarshipValidator.validate_student_id(id_field.value)
+        except IDFormatError as err:
+            id_field.error = str(err)
+            has_errors = True
 
         # 3. Validate Email
-        # TODO: Wrap validate_email in try...except and set email_field.error
-        clean_email = None
+        try:
+            clean_email = ScholarshipValidator.validate_email(email_field.value)
+        except EmailDomainError as err:
+            email_field.error = str(err)
+            has_errors = True
 
         # 4. Validate Phone
-        # TODO: Wrap validate_phone in try...except and set phone_field.error
-        clean_phone = None
+        try:
+            clean_phone = ScholarshipValidator.validate_phone(phone_field.value)
+        except ScholarshipValidationError as err:
+            phone_field.error = str(err)
+            has_errors = True
 
         # 5. Validate GWA
-        # TODO: Wrap validate_gwa in try...except and set gwa_field.error
-        clean_gwa = None
+        try:
+            clean_gwa = ScholarshipValidator.validate_gwa(gwa_field.value)
+        except GWARangeError as err:
+            gwa_field.error = str(err)
+            has_errors = True
 
         # 6. Validate Program Selection
         if not program_dropdown.value:
-            program_dropdown.error_text = "Please select an accredited scholarship program."
+            program_dropdown.error_text = (
+                "Please select an accredited scholarship program."
+            )
             has_errors = True
 
         # If any validation errors occurred, abort and notify
         if has_errors:
             page.show_dialog(
-                ft.SnackBar(
-                    content=ft.Text("Validation failed: Please correct highlighted fields."),
-                    bgcolor=ft.Colors.RED_700,
-                    behavior=ft.SnackBarBehavior.FLOATING
+                ft.AlertDialog(
+                    title=ft.Text("Validation Failed"),
+                    content=ft.Text(
+                        "Please correct the highlighted fields."
+                    ),
                 )
             )
             page.update()
             return
 
-        # 7. All Validations Passed: Instantiate Domain Contract
-        # TODO: Construct ScholarshipApplicant dataclass object
-        # TODO: Append to approved_applicants list
-        # TODO: Display green success SnackBar and reset form fields
+        # 7. Create the verified applicant record
+        applicant = ScholarshipApplicant(
+            full_name=clean_name,
+            student_id=clean_id,
+            email=clean_email,
+            phone=clean_phone,
+            gwa=clean_gwa,
+            program=program_dropdown.value,
+        )
+
+        # 8. Store the approved application
+        approved_applicants.append(applicant)
+
+        # 9. Show success notification
+        page.show_dialog(
+            ft.SnackBar(
+                content=ft.Text("Application submitted successfully!"),
+                bgcolor=ft.Colors.GREEN_700,
+                behavior=ft.SnackBarBehavior.FLOATING,
+            )
+        )
+
+        # 10. Update status
+        status_summary.value = (
+            f"Application submitted successfully. "
+            f"Total approved applicants: {len(approved_applicants)}"
+        )
+        status_summary.color = ft.Colors.GREEN_400
+
+        # 11. Reset the form fields
+        name_field.value = ""
+        id_field.value = ""
+        email_field.value = ""
+        phone_field.value = ""
+        gwa_field.value = ""
+        program_dropdown.value = None
 
         page.update()
 
