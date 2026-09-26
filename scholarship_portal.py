@@ -177,9 +177,11 @@ def main(page: ft.Page):
     page.padding = 25
 
     # Storage for approved applications during this session
+
     approved_applicants: list[ScholarshipApplicant] = []
 
     # UI Controls
+
     name_field = ft.TextField(
         label="Full Name",
         hint_text="e.g., Maria Clara Santos",
@@ -234,9 +236,79 @@ def main(page: ft.Page):
         size=13
     )
 
+    recent_title = ft.Text(
+        "◔  Recent Session Intake Contracts (In-Memory Pre-Persistence)",
+        size=13,
+        weight=ft.FontWeight.BOLD,
+        color=ft.Colors.GREY_300
+    )
+
+    recent_contracts = ft.Column(
+        controls=[],
+        spacing=8
+    )
+
     # ------------------------------------------------------------------------
     # REAL-TIME ERROR CLEARING HANDLERS (UX ENHANCEMENT)
     # ------------------------------------------------------------------------
+    def refresh_recent_contracts():
+        recent_contracts.controls.clear()
+        for applicant in reversed(approved_applicants):
+            recent_contracts.controls.append(
+                ft.Container(
+                    content=ft.Row(
+                        controls=[
+                            ft.Icon(
+                                ft.Icons.VERIFIED,
+                                color=ft.Colors.GREEN_400,
+                                size=22
+                            ),
+                            ft.Column(
+                                controls=[
+                                    ft.Text(
+                                        f"{applicant.full_name} "
+                                        f"({applicant.student_id})",
+                                        size=12,
+                                        weight=ft.FontWeight.BOLD
+                                    ),
+
+                                    ft.Text(
+                                          f"{applicant.program} • "
+                                          f"GWA: {applicant.gwa:.2f} • "
+                                          f"{applicant.email}",
+                                          size=10,
+                                          color=ft.Colors.GREY_400
+                                    )
+
+                                ],
+                                spacing=2,
+                                expand=True
+                            ),
+
+ 
+                            ft.Text(
+                                applicant.submitted_at.strftime("%H:%M:%S"),
+                                size=9,
+                                color=ft.Colors.GREY_500
+                            )
+                        ],
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER
+                    ),
+
+                    padding=10,
+                    border_radius=7,
+                    bgcolor=ft.Colors.GREY_800
+                )
+            )
+
+        status_summary.value = (
+             f"Applications registered this session: "
+             f"{len(approved_applicants)}"
+         )
+        
+       
+
+
     def clear_field_error(e):
         """Instantly clears error state when the user begins typing."""
         if e.control.error:
