@@ -387,11 +387,14 @@ def main(page: ft.Page):
         # If any validation errors occurred, abort and notify
         if has_errors:
             page.show_dialog(
-                ft.AlertDialog(
-                    title=ft.Text("Validation Failed"),
+                ft.SnackBar(
                     content=ft.Text(
-                        "Please correct the highlighted fields."
+                        "Validation Failed"
+                        "Please Fill Up the highlighted fields."
                     ),
+                    bgcolor=ft.Colors.RED_700,
+                    behavior=ft.SnackBarBehavior.FLOATING
+                   
                 )
             )
             page.update()
@@ -409,6 +412,8 @@ def main(page: ft.Page):
 
         # 8. Store the approved application
         approved_applicants.append(applicant)
+
+        refresh_recent_contracts()
 
         # 9. Show success notification
         page.show_dialog(
