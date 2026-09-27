@@ -478,13 +478,19 @@ def main(page: ft.Page):
                 ft.Container(height=10),
                 submit_button,
                 ft.Container(height=5),
-                status_summary
+                status_summary,
+                ft.Divider
+                (height=20,
+                color=ft.Colors.OUTLINE_VARIANT,
+                ),
+                recent_title,
+                recent_contracts
             ],
             spacing=14,
             scroll=ft.ScrollMode.AUTO
         )
     )
-
+    refresh_recent_contracts()
 
 if __name__ == "__main__":
     ft.run(main)
